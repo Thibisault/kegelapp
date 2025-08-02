@@ -12,147 +12,249 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon-180.png">
 
-  <meta name="description" content="Application Kegel simple : cycles contraction/relâchement, vibrations, sons, voix, hors-ligne.">
+  <meta name="description" content="Application Kegel: timer clair, presets rapides, mode éco-écran, hors-ligne.">
+
   <style>
     :root{
-      --bg:#0b1020; --card:#121833; --muted:#a7b3e8; --text:#f3f5ff; --accent:#7c9df0; --accent-2:#47d1b3; --danger:#ff6b6b;
+      --bg:#0b1020; --card:#111533; --muted:#a7b3e8; --text:#f3f5ff; --accent:#7c9df0; --accent2:#47d1b3; --danger:#ff6b6b;
+      --safe-top: env(safe-area-inset-top); --safe-bottom: env(safe-area-inset-bottom); --safe-left: env(safe-area-inset-left); --safe-right: env(safe-area-inset-right);
     }
     *{box-sizing:border-box}
     html,body{height:100%}
     body{
-      margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Inter,Helvetica,Arial,sans-serif;
-      background:radial-gradient(1200px 800px at 70% -10%,#16214b 0%, var(--bg) 50%);
-      color:var(--text);
+      margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif;
+      background:radial-gradient(1200px 800px at 70% -10%,#16214b 0%, var(--bg) 50%); color:var(--text);
     }
-    header{padding:16px 20px; display:flex; align-items:center; justify-content:space-between}
-    h1{font-size:22px; margin:0; letter-spacing:0.3px}
-    .pill{font-size:12px; padding:6px 10px; border-radius:999px; background:#1a2344; color:var(--muted)}
-    main{max-width:900px; margin:0 auto; padding:12px 16px 80px}
-    .grid{display:grid; gap:16px}
-    @media (min-width:860px){ .grid{grid-template-columns: 1.2fr 1fr;} }
 
+    /* ============ Layout ============ */
+    header{
+      position:sticky; top:0; z-index:20; padding:10px 16px calc(10px + var(--safe-top));
+      background:linear-gradient(180deg,rgba(15,22,50,.9),rgba(15,22,50,.6) 80%, transparent);
+      backdrop-filter: blur(6px);
+      display:flex; align-items:center; gap:10px; justify-content:space-between;
+    }
+    h1{font-size:18px; margin:0}
+    .nav{
+      display:flex; gap:6px; background:#0e1533; border:1px solid #28336b; border-radius:12px; padding:4px;
+    }
+    .tab{
+      padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:600; color:#cbd5ff; border:0; background:transparent;
+    }
+    .tab.active{ background:#22306a; color:white }
+
+    main{max-width:1100px; margin:0 auto; padding:8px 12px calc(70px + var(--safe-bottom));}
     .card{background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01) 40%), var(--card);
-          border:1px solid rgba(255,255,255,.06); border-radius:18px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,.25)}
-    .section-title{font-weight:600; margin:0 0 10px 0; color:#cbd5ff; letter-spacing:.2px}
-    label{display:block; font-size:13px; color:#cbd5ff; margin-bottom:6px}
-    .row{display:grid; grid-template-columns:1fr 1fr; gap:12px}
-    .input{
-      display:flex; align-items:center; gap:8px; background:#0e1533; border:1px solid #2a3566;
-      padding:10px 12px; border-radius:12px
+          border:1px solid rgba(255,255,255,.06); border-radius:18px; padding:14px; box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    .section-title{font-weight:600; margin:0 0 10px; color:#cbd5ff}
+
+    /* Timer layout: garantit la visibilité du ring en toute orientation */
+    #view-timer .wrap{
+      display:grid; gap:14px; align-items:center; justify-items:center;
+      grid-template-columns:1fr; grid-template-rows:auto auto auto;
     }
-    .input input{width:100%; background:transparent; color:var(--text); border:0; outline:0; font-size:16px}
-    .toggle{display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid #2a3566; background:#0e1533; border-radius:12px}
-    .toggle input{accent-color:var(--accent); width:20px; height:20px}
-    .hint{font-size:12px; color:var(--muted)}
+    /* paysage: ring à gauche, contrôles à droite */
+    @media (orientation: landscape) and (min-width:700px){
+      #view-timer .wrap{ grid-template-columns:1fr 1fr; grid-template-rows:auto auto; }
+      #ringBox{ grid-row:1 / span 2 }
+    }
+
+    /* Ring dimensionné aux bords utiles (svh/svw) */
+    .ring{
+      width:min(70svw, 58svh); height:min(70svw, 58svh); max-width:520px; max-height:520px;
+    }
+
+    .display{display:flex; flex-direction:column; align-items:center; gap:10px}
+    .phase{font-size:14px; color:#a7b3e8; letter-spacing:.4px}
+    .big{font-size:48px; font-weight:800; letter-spacing:.5px}
+    .counters{display:flex; gap:14px; color:#cbd5ff; font-size:13px}
+
+    .bar{display:flex; gap:10px; overflow:auto; scrollbar-width:none; -ms-overflow-style:none; padding:4px 2px}
+    .bar::-webkit-scrollbar{display:none}
+    .chip{white-space:nowrap; border:1px solid #2a3566; background:#0e1533; color:#e8ecff; border-radius:999px; padding:8px 12px; cursor:pointer; font-weight:600; font-size:13px}
+    .chip.active{ background:#22306a }
+    .chip.small{ padding:6px 10px; font-size:12px }
+
     .btns{display:flex; gap:10px; flex-wrap:wrap}
-    button{
-      appearance:none; border:0; border-radius:12px; padding:12px 16px; font-weight:600; cursor:pointer;
-      background:var(--accent); color:#0b1020; transition:transform .06s ease, opacity .2s;
-    }
+    button{appearance:none; border:0; border-radius:12px; padding:12px 16px; font-weight:700; cursor:pointer;
+      background:var(--accent); color:#0b1020; transition:transform .06s ease}
     button.secondary{background:#25305f; color:#e8ecff}
     button.ghost{background:transparent; border:1px solid #33407a; color:#cbd5ff}
     button:active{transform:scale(.98)}
     .danger{background:var(--danger); color:white}
-    .preset{font-size:12px; padding:6px 10px; border-radius:999px; border:1px solid #2a3566; background:#0e1533; cursor:pointer}
-    .preset:active{transform:scale(.98)}
 
-    /* Display */
-    .display{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:16px}
-    .phase{font-size:14px; color:#a7b3e8; letter-spacing:.4px}
-    .big{font-size:44px; font-weight:800; letter-spacing:1px}
-    .counters{display:flex; gap:14px; color:#cbd5ff; font-size:13px}
-    .ring{width:240px; height:240px}
+    .row{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+    .input{display:flex; align-items:center; gap:8px; background:#0e1533; border:1px solid #2a3566; padding:10px 12px; border-radius:12px}
+    .input input{width:100%; background:transparent; color:var(--text); border:0; outline:0; font-size:16px}
+    label{display:block; font-size:12px; color:#cbd5ff}
+    .toggle{display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid #2a3566; background:#0e1533; border-radius:12px}
+    .toggle input{accent-color:var(--accent); width:20px; height:20px}
+
     .progressbar{height:10px; width:100%; background:#132050; border-radius:999px; overflow:hidden; border:1px solid #253272}
-    .progressbar__fill{height:100%; width:0%; background:linear-gradient(90deg,var(--accent),var(--accent-2));}
+    .progressbar__fill{height:100%; width:0%; background:linear-gradient(90deg,var(--accent),var(--accent2));}
 
-    footer{position:fixed; inset:auto 0 8px 0; display:flex; align-items:center; justify-content:center; pointer-events:none}
-    .footer-inner{pointer-events:auto; background:#0f1738; border:1px solid #2a3566; padding:8px 10px; border-radius:12px; display:flex; gap:10px; align-items:center}
+    /* Nav bas collée type app mobile */
+    footer{
+      position:fixed; inset:auto var(--safe-right) var(--safe-bottom) var(--safe-left);
+      display:flex; justify-content:center; pointer-events:none; z-index:30;
+    }
+    .footer-inner{ pointer-events:auto; width:100%; max-width:1100px; display:flex; justify-content:space-between; gap:10px;
+      padding:8px 12px; }
     .a2hs{display:none}
+
+    /* Vue/Route */
+    [data-view]{ display:none }
+    [data-view].active{ display:block }
+
+    /* Éco-écran (écran noir) */
+    #ecoOverlay{
+      position:fixed; inset:0; background:black; opacity:0; pointer-events:none; transition:opacity .2s ease; z-index:50;
+    }
+    #ecoOverlay.on{ opacity:1; pointer-events:auto }
+    #ecoOverlay .tip{ position:absolute; bottom:calc(24px + var(--safe-bottom)); width:100%; text-align:center; color:#8aa; font-size:12px }
     .sr-only{position:absolute; left:-9999px}
   </style>
 </head>
 <body>
   <header>
     <h1>🟣 KegelApp</h1>
-    <div class="pill" id="installHint">Hors-ligne prêt</div>
+    <div class="nav" role="tablist" aria-label="Navigation">
+      <button class="tab active" data-route="timer" role="tab" aria-selected="true">Timer</button>
+      <button class="tab" data-route="presets" role="tab" aria-selected="false">Presets</button>
+      <button class="tab" data-route="settings" role="tab" aria-selected="false">Réglages</button>
+    </div>
   </header>
 
-  <main class="grid">
-    <!-- Affichage / guidage -->
-    <section class="card">
-      <h2 class="section-title">Séance</h2>
-      <div class="display">
-        <!-- Anneau de progression -->
-        <svg class="ring" viewBox="0 0 120 120" aria-hidden="true">
-          <circle cx="60" cy="60" r="52" stroke="#1e2a5a" stroke-width="10" fill="none"/>
-          <circle id="ringProgress" cx="60" cy="60" r="52" stroke="url(#grad)" stroke-width="10" fill="none"
-                  stroke-linecap="round" stroke-dasharray="326.725" stroke-dashoffset="326.725"
-                  transform="rotate(-90 60 60)"/>
-          <defs>
-            <linearGradient id="grad" x1="0" x2="1">
-              <stop offset="0%" stop-color="#7c9df0"/>
-              <stop offset="100%" stop-color="#47d1b3"/>
-            </linearGradient>
-          </defs>
-          <!-- Point animé -->
-          <circle id="dot" cx="60" cy="8" r="3" fill="#47d1b3" />
-        </svg>
-
-        <div class="phase" id="phaseLabel" aria-live="polite">Prêt ?</div>
-        <div class="big" id="timeLeft">–:–</div>
-
-        <div class="counters">
-          <div>Set :<b id="setNum">0</b>/<b id="setTotal">0</b></div>
-          <div>Rép :<b id="repNum">0</b>/<b id="repTotal">0</b></div>
+  <main>
+    <!-- ===== TIMER ===== -->
+    <section id="view-timer" data-view class="active">
+      <div class="card">
+        <div class="bar" id="presetBar" aria-label="Presets rapides (balayez)">
+          <!-- rempli en JS: chips -->
         </div>
+      </div>
 
-        <div class="progressbar" aria-hidden="true"><div id="linearFill" class="progressbar__fill"></div></div>
+      <div class="wrap">
+        <section id="ringBox" class="card">
+          <div class="display">
+            <!-- Ring -->
+            <svg class="ring" viewBox="0 0 120 120" aria-hidden="true">
+              <circle cx="60" cy="60" r="52" stroke="#1e2a5a" stroke-width="10" fill="none"/>
+              <circle id="ringProgress" cx="60" cy="60" r="52" stroke="url(#grad)" stroke-width="10" fill="none"
+                      stroke-linecap="round" stroke-dasharray="326.725" stroke-dashoffset="326.725"
+                      transform="rotate(-90 60 60)"/>
+              <defs>
+                <linearGradient id="grad" x1="0" x2="1">
+                  <stop offset="0%" stop-color="#7c9df0"/>
+                  <stop offset="100%" stop-color="#47d1b3"/>
+                </linearGradient>
+              </defs>
+              <circle id="dot" cx="60" cy="8" r="3" fill="#47d1b3" />
+            </svg>
 
-        <div class="btns" style="margin-top:6px">
-          <button id="startBtn">Démarrer</button>
-          <button id="pauseBtn" class="secondary">Pause</button>
-          <button id="resetBtn" class="ghost">Réinitialiser</button>
-        </div>
-        <div class="hint">Conseil : engagez les muscles du plancher pelvien, respirez normalement, évitez de contracter les abdos/fessiers.</div>
-        <div class="sr-only" aria-live="assertive" id="live"></div>
+            <div class="phase" id="phaseLabel" aria-live="polite">Prêt ?</div>
+            <div class="big" id="timeLeft">–:–</div>
+
+            <div class="counters">
+              <div>Set : <b id="setNum">0</b>/<b id="setTotal">0</b></div>
+              <div>Rép : <b id="repNum">0</b>/<b id="repTotal">0</b></div>
+            </div>
+
+            <div class="progressbar" aria-hidden="true"><div id="linearFill" class="progressbar__fill"></div></div>
+
+            <div class="btns" style="margin-top:6px">
+              <button id="startBtn">Démarrer</button>
+              <button id="pauseBtn" class="secondary">Pause</button>
+              <button id="resetBtn" class="ghost">Réinitialiser</button>
+            </div>
+
+            <div class="btns">
+              <button id="ecoToggle" class="ghost">Mode éco-écran</button>
+              <button id="bgAudioToggle" class="ghost">Écran éteint (exp.)</button>
+            </div>
+
+            <div class="sr-only" aria-live="assertive" id="live"></div>
+            <div class="hint" style="font-size:12px; color:#a7b3e8">
+              Astuce : en paysage, tout reste visible. Le mode éco-écran garde l’écran allumé, mais noir.
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h3 class="section-title">Aperçu du set en cours</h3>
+          <div id="phasePreview" style="font-size:13px; color:#cbd5ff"></div>
+        </section>
       </div>
     </section>
 
-    <!-- Réglages -->
-    <section class="card">
-      <h2 class="section-title">Réglages</h2>
-      <div class="row">
-        <div class="input"><label for="prep">Préparation (s)</label><input id="prep" type="number" min="0" value="5"></div>
-        <div class="input"><label for="sets">Sets</label><input id="sets" type="number" min="1" value="3"></div>
-      </div>
-      <div class="row">
-        <div class="input"><label for="contract">Contraction (s)</label><input id="contract" type="number" min="1" value="5"></div>
-        <div class="input"><label for="relax">Relâchement (s)</label><input id="relax" type="number" min="1" value="5"></div>
-      </div>
-      <div class="row">
-        <div class="input"><label for="reps">Répétitions / set</label><input id="reps" type="number" min="1" value="10"></div>
-        <div class="input"><label for="rest">Repos entre sets (s)</label><input id="rest" type="number" min="0" value="20"></div>
-      </div>
+    <!-- ===== PRESETS (création/édition) ===== -->
+    <section id="view-presets" data-view>
+      <section class="card">
+        <h2 class="section-title">Vos presets</h2>
+        <div class="bar" id="presetList"></div>
+      </section>
 
-      <div class="row">
-        <label class="toggle"><input type="checkbox" id="vibrate" checked> Vibrations</label>
-        <label class="toggle"><input type="checkbox" id="beep" checked> Bips sonores</label>
-      </div>
-      <div class="row">
-        <label class="toggle"><input type="checkbox" id="voice"> Annonces vocales</label>
-        <label class="toggle"><input type="checkbox" id="countdown" checked> Compte à rebours visible</label>
-      </div>
+      <section class="card">
+        <h3 class="section-title">Créer / éditer un preset</h3>
+        <div class="row">
+          <div class="input"><label for="pname">Nom</label><input id="pname" placeholder="ex. Doux matin"></div>
+          <div class="input"><label for="pprep">Préparation (s)</label><input id="pprep" type="number" min="0" value="5"></div>
+        </div>
+        <div class="row">
+          <div class="input"><label for="psets">Sets</label><input id="psets" type="number" min="1" value="3"></div>
+          <div class="input"><label for="preps">Répétitions / set</label><input id="preps" type="number" min="1" value="10"></div>
+        </div>
+        <div class="row">
+          <div class="input"><label for="pcontract">Contraction (s)</label><input id="pcontract" type="number" min="1" value="5"></div>
+          <div class="input"><label for="prelax">Relâchement (s)</label><input id="prelax" type="number" min="1" value="5"></div>
+        </div>
+        <div class="row">
+          <div class="input"><label for="prest">Repos entre sets (s)</label><input id="prest" type="number" min="0" value="20"></div>
+          <div class="input"><label for="pid">ID (auto)</label><input id="pid" disabled placeholder="sera généré"></div>
+        </div>
+        <div class="btns">
+          <button id="savePreset">Enregistrer</button>
+          <button id="newPreset" class="secondary">Nouveau</button>
+        </div>
+      </section>
+    </section>
 
-      <div style="margin:10px 0 6px">Presets rapides</div>
-      <div class="btns">
-        <button class="preset" data-preset="beginner">Débutant (3×10 • 5/5s)</button>
-        <button class="preset" data-preset="intermediate">Intermédiaire (3×12 • 6/6s)</button>
-        <button class="preset" data-preset="advanced">Avancé (4×15 • 8/8s)</button>
-        <button class="preset" data-preset="sprint">Sprints (2×20 • 2/2s)</button>
-      </div>
-      <div class="hint" style="margin-top:8px">Les réglages sont enregistrés localement sur cet appareil.</div>
+    <!-- ===== RÉGLAGES ===== -->
+    <section id="view-settings" data-view>
+      <section class="card">
+        <h2 class="section-title">Réglages du timer</h2>
+        <div class="row">
+          <div class="input"><label for="prep">Préparation (s)</label><input id="prep" type="number" min="0" value="5"></div>
+          <div class="input"><label for="sets">Sets</label><input id="sets" type="number" min="1" value="3"></div>
+        </div>
+        <div class="row">
+          <div class="input"><label for="contract">Contraction (s)</label><input id="contract" type="number" min="1" value="5"></div>
+          <div class="input"><label for="relax">Relâchement (s)</label><input id="relax" type="number" min="1" value="5"></div>
+        </div>
+        <div class="row">
+          <div class="input"><label for="reps">Répétitions / set</label><input id="reps" type="number" min="1" value="10"></div>
+          <div class="input"><label for="rest">Repos entre sets (s)</label><input id="rest" type="number" min="0" value="20"></div>
+        </div>
+        <div class="row">
+          <label class="toggle"><input type="checkbox" id="vibrate" checked> Vibrations</label>
+          <label class="toggle"><input type="checkbox" id="beep" checked> Bips sonores</label>
+        </div>
+        <div class="row">
+          <label class="toggle"><input type="checkbox" id="voice"> Annonces vocales</label>
+          <label class="toggle"><input type="checkbox" id="countdown" checked> Compte à rebours visible</label>
+        </div>
+        <p class="hint">
+          <b>Écran éteint :</b> le mode “éco-écran” garde l’app **réellement active** en rendant l’écran noir (fiable).  
+          Le mode “écran éteint (expérimental)” tente de poursuivre les **bips** via une piste audio programmée (surtout Android/Chrome).  
+          La voix et les vibrations peuvent être coupées par le système quand l’écran se verrouille.
+        </p>
+      </section>
     </section>
   </main>
+
+  <!-- Éco-écran: superposition noire -->
+  <div id="ecoOverlay">
+    <div class="tip">Tapez deux fois pour quitter le mode éco-écran</div>
+  </div>
 
   <footer>
     <div class="footer-inner">
@@ -163,23 +265,24 @@
 
   <script>
   (() => {
-    // ------- Utils --------
-    const $ = sel => document.querySelector(sel);
+    /* ====== Utils ====== */
+    const $ = s => document.querySelector(s);
+    const $$ = s => Array.from(document.querySelectorAll(s));
     const clamp = (n,min,max)=>Math.max(min,Math.min(max,n));
-    const format = s => {
-      s = Math.max(0, Math.round(s));
-      return s >= 60 ? `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}` : `${s}s`;
-    };
+    const CIRC = 2*Math.PI*52;
+    const format = s => { s=Math.max(0,Math.round(s)); return s>=60 ? `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`:`${s}s`; };
 
-    // ------- Elements -------
-    const ring = $('#ringProgress');
-    const dot = $('#dot');
-    const timeLeftEl = $('#timeLeft');
-    const phaseLabel = $('#phaseLabel');
-    const setNumEl = $('#setNum'), setTotalEl = $('#setTotal');
-    const repNumEl = $('#repNum'), repTotalEl = $('#repTotal');
-    const linearFill = $('#linearFill');
-    const live = $('#live');
+    /* ====== Elements ====== */
+    const views = {
+      timer: $('#view-timer'),
+      presets: $('#view-presets'),
+      settings: $('#view-settings'),
+    };
+    const ring = $('#ringProgress'), dot=$('#dot'), timeLeftEl=$('#timeLeft'), phaseLabel=$('#phaseLabel');
+    const setNumEl=$('#setNum'), setTotalEl=$('#setTotal'), repNumEl=$('#repNum'), repTotalEl=$('#repTotal');
+    const linearFill=$('#linearFill'), live=$('#live'), presetBar=$('#presetBar'), presetList=$('#presetList');
+    const phasePreview=$('#phasePreview');
+    const ecoOverlay=$('#ecoOverlay');
 
     const inputs = {
       prep: $('#prep'), sets: $('#sets'), reps: $('#reps'),
@@ -187,73 +290,123 @@
       vibrate: $('#vibrate'), beep: $('#beep'), voice: $('#voice'), countdown: $('#countdown')
     };
 
-    const startBtn = $('#startBtn'), pauseBtn = $('#pauseBtn'), resetBtn = $('#resetBtn');
+    const startBtn=$('#startBtn'), pauseBtn=$('#pauseBtn'), resetBtn=$('#resetBtn');
+    const ecoToggle=$('#ecoToggle'), bgAudioToggle=$('#bgAudioToggle');
 
-    // ------- Persist settings -------
-    const LS_KEY = 'kegel.settings.v1';
-    const load = () => {
-      try { const s = JSON.parse(localStorage.getItem(LS_KEY)||'{}'); Object.entries(s).forEach(([k,v])=>{
-        if(inputs[k]===undefined) return;
-        if(typeof inputs[k].checked === 'boolean') inputs[k].checked = !!v;
-        else inputs[k].value = v;
-      }); } catch(e){}
-    };
-    const save = () => {
-      const s={}; for(const [k,el] of Object.entries(inputs)){ s[k] = (typeof el.checked==='boolean') ? el.checked : Number(el.value); }
-      localStorage.setItem(LS_KEY, JSON.stringify(s));
-    };
-    Object.values(inputs).forEach(el => el.addEventListener('change', save));
-    load();
+    /* ====== Navigation (onglets) ====== */
+    function setRoute(name){
+      $$('.tab').forEach(t => {
+        const active = t.dataset.route===name;
+        t.classList.toggle('active', active);
+        t.setAttribute('aria-selected', active ? 'true' : 'false');
+      });
+      Object.keys(views).forEach(k => views[k].classList.toggle('active', k===name));
+      location.hash = '#'+name;
+    }
+    $$('.tab').forEach(t=>t.addEventListener('click',()=>setRoute(t.dataset.route)));
+    if(location.hash){ const r=location.hash.slice(1); if(views[r]) setRoute(r); }
 
-    // ------- Audio / Beep -------
-    let audioCtx, gain;
-    function beep(freq=880, dur=0.08){
-      if(!inputs.beep.checked) return;
+    /* ====== Storage ====== */
+    const LS_SETTINGS='kegel.settings.v2';
+    const LS_PRESETS='kegel.presets.v1';
+    const DEFAULT_PRESETS = [
+      {id:'beginner', name:'Débutant 3×10 (5/5)', prep:5, sets:3, reps:10, contract:5, relax:5, rest:20},
+      {id:'intermediate', name:'Intermédiaire 3×12 (6/6)', prep:5, sets:3, reps:12, contract:6, relax:6, rest:25},
+      {id:'advanced', name:'Avancé 4×15 (8/8)', prep:5, sets:4, reps:15, contract:8, relax:8, rest:30},
+      {id:'sprint', name:'Sprints 2×20 (2/2)', prep:3, sets:2, reps:20, contract:2, relax:2, rest:15},
+    ];
+    function loadSettings(){
+      try{ const s=JSON.parse(localStorage.getItem(LS_SETTINGS)||'{}'); for(const [k,v] of Object.entries(s)){
+        if(inputs[k]) (typeof inputs[k].checked==='boolean') ? inputs[k].checked=!!v : inputs[k].value=v;
+      }}catch(e){}
+    }
+    function saveSettings(){
+      const s={}; for(const [k,el] of Object.entries(inputs)){ s[k]= (typeof el.checked==='boolean') ? el.checked : Number(el.value); }
+      localStorage.setItem(LS_SETTINGS, JSON.stringify(s));
+    }
+    function loadPresets(){
       try{
-        audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-        gain = gain || audioCtx.createGain(); gain.connect(audioCtx.destination);
-        const osc = audioCtx.createOscillator();
-        osc.type = 'sine'; osc.frequency.value = freq;
-        const g = audioCtx.createGain(); g.gain.value = 0.001; // start silent, ramp to avoid click
-        osc.connect(g); g.connect(gain);
-        osc.start();
-        g.gain.exponentialRampToValueAtTime(0.3, audioCtx.currentTime+0.02);
-        g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+dur);
-        osc.stop(audioCtx.currentTime+dur+0.02);
+        const raw=JSON.parse(localStorage.getItem(LS_PRESETS)||'[]');
+        if(Array.isArray(raw) && raw.length) return raw;
       }catch(e){}
+      localStorage.setItem(LS_PRESETS, JSON.stringify(DEFAULT_PRESETS));
+      return DEFAULT_PRESETS.slice();
     }
+    function savePresets(presets){ localStorage.setItem(LS_PRESETS, JSON.stringify(presets)); }
 
-    // ------- Speech (optional) -------
-    function speak(text){
-      if(!inputs.voice.checked || !('speechSynthesis' in window)) return;
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = 'fr-FR'; u.rate = 1; u.pitch = 1.1;
-      window.speechSynthesis.cancel(); window.speechSynthesis.speak(u);
+    loadSettings();
+    Object.values(inputs).forEach(el=>el.addEventListener('change', saveSettings));
+    let PRESETS = loadPresets();
+
+    /* ====== Preset UI ====== */
+    let currentPresetId = PRESETS[0]?.id || 'beginner';
+    function applyPreset(p){
+      inputs.prep.value=p.prep; inputs.sets.value=p.sets; inputs.reps.value=p.reps;
+      inputs.contract.value=p.contract; inputs.relax.value=p.relax; inputs.rest.value=p.rest;
+      saveSettings(); buildSeq(); renderPhasePreview();
     }
-
-    // ------- Vibration -------
-    function vibrate(pattern){ if(inputs.vibrate.checked && navigator.vibrate) navigator.vibrate(pattern); }
-
-    // ------- Wake Lock -------
-    let wakeLock;
-    async function lockScreen(){
-      try{
-        if('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
-      }catch(e){}
+    function renderPresetBar(){
+      presetBar.innerHTML='';
+      PRESETS.forEach(p=>{
+        const b=document.createElement('button');
+        b.className='chip'; if(p.id===currentPresetId) b.classList.add('active');
+        b.textContent=p.name; b.title='Appliquer ce preset';
+        b.addEventListener('click', ()=>{ currentPresetId=p.id; renderPresetBar(); applyPreset(p); });
+        presetBar.appendChild(b);
+      });
+      // Bouton “+” ouvre l’onglet Presets
+      const add=document.createElement('button'); add.className='chip small'; add.textContent='＋ Nouveau';
+      add.addEventListener('click', ()=>setRoute('presets')); presetBar.appendChild(add);
     }
-    function releaseLock(){ try{ if(wakeLock) { wakeLock.release(); wakeLock = null; } }catch(e){} }
+    function renderPresetList(){
+      presetList.innerHTML='';
+      PRESETS.forEach(p=>{
+        const wrap=document.createElement('div'); wrap.className='chip'; wrap.style.display='inline-flex'; wrap.style.alignItems='center'; wrap.style.gap='8px';
+        const name=document.createElement('span'); name.textContent=p.name;
+        const use=document.createElement('button'); use.textContent='Utiliser'; use.className='chip small'; use.addEventListener('click', ()=>{ currentPresetId=p.id; applyPreset(p); setRoute('timer'); renderPresetBar(); });
+        const edit=document.createElement('button'); edit.textContent='Éditer'; edit.className='chip small'; edit.addEventListener('click', ()=>fillPresetForm(p));
+        const del=document.createElement('button'); del.textContent='Suppr.'; del.className='chip small'; del.addEventListener('click', ()=>{
+          if(confirm('Supprimer ce preset ?')){ PRESETS=PRESETS.filter(x=>x.id!==p.id); savePresets(PRESETS); renderPresetList(); renderPresetBar(); }
+        });
+        wrap.append(name,use,edit,del); presetList.appendChild(wrap);
+      });
+    }
+    function uid(){ return 'p'+Math.random().toString(36).slice(2,9); }
 
-    // ------- Sequence builder -------
+    // Formulaire presets
+    const f = {
+      id: $('#pid'), name: $('#pname'), prep: $('#pprep'), sets: $('#psets'), reps: $('#preps'),
+      contract: $('#pcontract'), relax: $('#prelax'), rest: $('#prest')
+    };
+    function fillPresetForm(p){
+      f.id.value=p.id; f.name.value=p.name; f.prep.value=p.prep; f.sets.value=p.sets; f.reps.value=p.reps; f.contract.value=p.contract; f.relax.value=p.relax; f.rest.value=p.rest;
+    }
+    $('#newPreset').addEventListener('click', ()=>{ f.id.value=''; f.name.value=''; f.prep.value=5; f.sets.value=3; f.reps.value=10; f.contract.value=5; f.relax.value=5; f.rest.value=20; });
+    $('#savePreset').addEventListener('click', ()=>{
+      const p = {
+        id: f.id.value || uid(),
+        name: (f.name.value||'Preset').slice(0,40),
+        prep: Number(f.prep.value), sets:Number(f.sets.value), reps:Number(f.reps.value),
+        contract:Number(f.contract.value), relax:Number(f.relax.value), rest:Number(f.rest.value),
+      };
+      const i = PRESETS.findIndex(x=>x.id===p.id);
+      if(i>=0) PRESETS[i]=p; else PRESETS.push(p);
+      savePresets(PRESETS); renderPresetList(); renderPresetBar(); fillPresetForm(p);
+      alert('Preset enregistré.');
+    });
+
+    renderPresetBar(); renderPresetList();
+
+    /* ====== Séquence & Timer ====== */
     function buildPhases(){
-      const prep = clamp(Number(inputs.prep.value),0,600);
-      const sets = clamp(Number(inputs.sets.value),1,20);
-      const reps = clamp(Number(inputs.reps.value),1,100);
-      const c = clamp(Number(inputs.contract.value),1,120);
-      const r = clamp(Number(inputs.relax.value),1,120);
-      const rest = clamp(Number(inputs.rest.value),0,300);
-      const phases = [];
+      const prep=clamp(Number(inputs.prep.value),0,600);
+      const sets=clamp(Number(inputs.sets.value),1,20);
+      const reps=clamp(Number(inputs.reps.value),1,120);
+      const c=clamp(Number(inputs.contract.value),1,180);
+      const r=clamp(Number(inputs.relax.value),1,180);
+      const rest=clamp(Number(inputs.rest.value),0,600);
+      const phases=[];
       if(prep>0) phases.push({type:'prep', label:'Préparez-vous', dur:prep});
-
       for(let s=1;s<=sets;s++){
         for(let i=1;i<=reps;i++){
           phases.push({type:'contract', label:'Contractez', dur:c, set:s, rep:i, reps, sets});
@@ -264,166 +417,154 @@
       return {phases, meta:{sets,reps}};
     }
 
-    // ------- Runner -------
-    const CIRC = 2*Math.PI*52;
+    let seq=buildPhases(); setTotalEl.textContent=seq.meta.sets; repTotalEl.textContent=seq.meta.reps;
+    function buildSeq(){ seq=buildPhases(); setTotalEl.textContent=seq.meta.sets; repTotalEl.textContent=seq.meta.reps; }
+
+    function renderPhasePreview(){
+      const total = seq.phases.reduce((a,p)=>a+p.dur,0);
+      const parts = seq.phases.slice(0,12).map(p=>p.label.replace(' (entre sets)','')); // aperçu court
+      phasePreview.textContent = parts.join(' • ') + (seq.phases.length>12 ? '…' : '') + `  (≈ ${format(total)})`;
+    }
+    renderPhasePreview();
+
+    // Audio/Vibration
+    let audioCtx, gain;
+    function ensureAudio(){ if(!audioCtx){ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); gain = audioCtx.createGain(); gain.gain.value=0.3; gain.connect(audioCtx.destination); } }
+    function beep(freq=880, dur=0.08){
+      if(!inputs.beep.checked) return;
+      try{
+        ensureAudio();
+        const osc = audioCtx.createOscillator(); const g = audioCtx.createGain();
+        osc.type='sine'; osc.frequency.value=freq; g.gain.value=0.001; osc.connect(g); g.connect(gain);
+        const t=audioCtx.currentTime; osc.start(t); g.gain.exponentialRampToValueAtTime(0.3,t+0.02); g.gain.exponentialRampToValueAtTime(0.001,t+dur); osc.stop(t+dur+0.02);
+      }catch(e){}
+    }
+    function speak(text){
+      if(!inputs.voice.checked || !('speechSynthesis' in window)) return;
+      const u=new SpeechSynthesisUtterance(text); u.lang='fr-FR'; u.rate=1; u.pitch=1.1; window.speechSynthesis.cancel(); window.speechSynthesis.speak(u);
+    }
+    function vibrate(pattern){ if(inputs.vibrate.checked && navigator.vibrate) navigator.vibrate(pattern); }
+
+    // === Piste audio “programmée” pour écran éteint (expérimental)
+    // Préprogramme tous les bips sur la timeline WebAudio; sur Android/Chrome ça peut continuer écran verrouillé.
+    let bgSources=[];
+    function scheduleBackgroundBeepTrack(){
+      if(!inputs.beep.checked) return;
+      try{
+        ensureAudio(); // besoin d'un geste utilisateur avant (Start)
+        // Nettoie toute ancienne piste
+        bgSources.forEach(s=>{ try{s.stop();}catch(_){} }); bgSources=[];
+        let t=audioCtx.currentTime + 0.2; // petit décalage
+        seq.phases.forEach((p,idx)=>{
+          // beep au début de la phase
+          const src = audioCtx.createOscillator(); const g=audioCtx.createGain();
+          src.type='sine'; src.frequency.value = (p.type==='contract') ? 900 : (p.type==='relax'? 660 : 520);
+          g.gain.value=0.001; src.connect(g); g.connect(gain);
+          src.start(t); g.gain.exponentialRampToValueAtTime(0.3, t+0.02);
+          g.gain.exponentialRampToValueAtTime(0.001, t+0.10);
+          src.stop(t+0.12);
+          bgSources.push(src);
+          t += p.dur;
+        });
+      }catch(e){}
+    }
+
+    // Wake Lock & éco-écran
+    let wakeLock=null;
+    async function lockScreen(){ try{ if('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); }catch(e){} }
+    function releaseLock(){ try{ if(wakeLock){ wakeLock.release(); wakeLock=null; } }catch(e){} }
+    function ecoOn(){ ecoOverlay.classList.add('on'); lockScreen(); }
+    function ecoOff(){ ecoOverlay.classList.remove('on'); releaseLock(); }
+    let lastTap=0;
+    ecoOverlay.addEventListener('click', ()=>{ const now=Date.now(); if(now-lastTap<400) ecoOff(); lastTap=now; });
+
+    // Runner
     let idx=0, startedAt=0, pausedAt=0, remaining=0, raf=0, playing=false;
-    let seq = buildPhases(); setTotalEl.textContent = seq.meta.sets; repTotalEl.textContent = seq.meta.reps;
-
     function resetUI(){
-      cancelAnimationFrame(raf);
-      idx=0; startedAt=0; pausedAt=0; remaining=0; playing=false;
-      ring.style.strokeDashoffset = CIRC;
-      linearFill.style.width = '0%';
-      dot.setAttribute('cx','60'); dot.setAttribute('cy','8');
-      timeLeftEl.textContent = '–:–';
-      phaseLabel.textContent = 'Prêt ?';
-      setNumEl.textContent = '0'; repNumEl.textContent = '0';
-      releaseLock();
+      cancelAnimationFrame(raf); playing=false; idx=0; startedAt=0; pausedAt=0; remaining=0;
+      ring.style.strokeDashoffset=CIRC; linearFill.style.width='0%'; dot.setAttribute('cx','60'); dot.setAttribute('cy','8');
+      timeLeftEl.textContent='–:–'; phaseLabel.textContent='Prêt ?'; setNumEl.textContent='0'; repNumEl.textContent='0';
+      ecoOff();
     }
-
     function setPhase(p){
-      const label = p.label;
-      phaseLabel.textContent = label;
-      live.textContent = label;
-      if(p.type==='contract'){ phaseLabel.style.color = '#9ed7cc'; beep(900,0.09); vibrate([60]); speak('Contractez'); }
-      else if(p.type==='relax'){ phaseLabel.style.color = '#cbd5ff'; beep(660,0.08); vibrate([40]); speak('Relâchez'); }
-      else if(p.type==='setrest'){ phaseLabel.style.color = '#ffe29b'; beep(520,0.08); vibrate([100,30,100]); speak('Repos'); }
-      else { phaseLabel.style.color = '#a7b3e8'; beep(700,0.06); }
-      setNumEl.textContent = p.set || idxSetOf(idx)+''; // best effort
-      repNumEl.textContent = p.rep || ((p.type==='relax'||p.type==='contract') ? 1 : 0);
+      phaseLabel.textContent = p.label; live.textContent=p.label;
+      if(p.type==='contract'){ phaseLabel.style.color='#9ed7cc'; beep(900,0.09); vibrate([60]); speak('Contractez'); }
+      else if(p.type==='relax'){ phaseLabel.style.color='#cbd5ff'; beep(660,0.08); vibrate([40]); speak('Relâchez'); }
+      else if(p.type==='setrest'){ phaseLabel.style.color='#ffe29b'; beep(520,0.08); vibrate([100,30,100]); speak('Repos'); }
+      else { phaseLabel.style.color='#a7b3e8'; beep(700,0.06); }
+      if(p.rep) repNumEl.textContent=p.rep; if(p.set) setNumEl.textContent=p.set;
     }
-
-    function idxSetOf(i){
-      // Infer set number by scanning phases up to index i
-      let set=0; for(let k=0;k<=i;k++){ const ph = seq.phases[k]; if(ph?.type==='contract' && ph.set) set = ph.set; }
-      return set;
-    }
-
     function tick(){
-      const p = seq.phases[idx];
-      if(!p){ finish(); return; }
-      const now = performance.now();
-      const elapsed = (now - startedAt) / 1000;
-      const remain = Math.max(0, remaining - elapsed);
+      const p=seq.phases[idx]; if(!p){ finish(); return; }
+      const now=performance.now(); const elapsed=(now-startedAt)/1000; const remain=Math.max(0, remaining - elapsed);
       timeLeftEl.textContent = inputs.countdown.checked ? format(remain) : '';
-      // progress per phase
-      const t = p.dur;
-      const frac = clamp((t - remain) / t, 0, 1);
-      const off = CIRC * (1 - frac);
-      ring.style.strokeDashoffset = off;
+      const t=p.dur; const frac=Math.max(0,Math.min(1,(t-remain)/t));
+      ring.style.strokeDashoffset = CIRC*(1-frac);
       linearFill.style.width = ( (idx/seq.phases.length)*100 + frac*(100/seq.phases.length) ) + '%';
-
-      // move dot around circle
-      const ang = (frac*360 - 90) * Math.PI/180;
-      const cx = 60 + 52*Math.cos(ang);
-      const cy = 60 + 52*Math.sin(ang);
-      dot.setAttribute('cx', cx.toFixed(2));
-      dot.setAttribute('cy', cy.toFixed(2));
-
+      const ang=(frac*360-90)*Math.PI/180; dot.setAttribute('cx',(60+52*Math.cos(ang)).toFixed(2)); dot.setAttribute('cy',(60+52*Math.sin(ang)).toFixed(2));
       if(remain<=0.02){
-        idx++;
-        if(seq.phases[idx]){
-          remaining = seq.phases[idx].dur;
-          startedAt = performance.now();
-          setPhase(seq.phases[idx]);
-          if(seq.phases[idx].rep) repNumEl.textContent = seq.phases[idx].rep;
-          if(seq.phases[idx].set) setNumEl.textContent = seq.phases[idx].set;
-        }else{
-          finish(); return;
-        }
+        idx++; if(seq.phases[idx]){ remaining=seq.phases[idx].dur; startedAt=performance.now(); setPhase(seq.phases[idx]); }
+        else { finish(); return; }
       }
-      if(playing) raf = requestAnimationFrame(tick);
+      if(playing) raf=requestAnimationFrame(tick);
     }
-
     function start(){
-      save();
-      seq = buildPhases();
-      setTotalEl.textContent = seq.meta.sets; repTotalEl.textContent = seq.meta.reps;
+      saveSettings(); buildSeq(); renderPhasePreview();
       if(!playing){
-        playing = true;
-        if(idx===0){ idx = 0; remaining = seq.phases[0]?.dur || 0; setPhase(seq.phases[0]||{label:'Prêt',dur:0}); }
-        startedAt = performance.now();
-        lockScreen();
-        raf = requestAnimationFrame(tick);
+        playing=true;
+        if(idx===0){ idx=0; remaining=seq.phases[0]?.dur||0; setPhase(seq.phases[0]||{label:'Prêt',dur:0}); }
+        startedAt=performance.now(); lockScreen(); raf=requestAnimationFrame(tick);
       }
     }
-
     function pause(){
       if(!playing) return;
-      playing = false;
-      cancelAnimationFrame(raf);
-      pausedAt = performance.now();
-      // freeze remaining
-      const elapsed = (pausedAt - startedAt)/1000;
-      remaining = Math.max(0, remaining - elapsed);
-      releaseLock();
+      playing=false; cancelAnimationFrame(raf); pausedAt=performance.now();
+      const elapsed=(pausedAt-startedAt)/1000; remaining=Math.max(0, remaining - elapsed); releaseLock();
     }
-
     function resume(){
-      if(playing) return;
-      playing = true;
-      startedAt = performance.now();
-      lockScreen();
-      raf = requestAnimationFrame(tick);
+      if(playing) return; playing=true; startedAt=performance.now(); lockScreen(); raf=requestAnimationFrame(tick);
     }
-
     function finish(){
       playing=false; cancelAnimationFrame(raf);
-      ring.style.strokeDashoffset = 0;
-      linearFill.style.width = '100%';
-      phaseLabel.textContent = '✅ Séance terminée';
-      timeLeftEl.textContent = 'Bien joué !';
-      vibrate([200,50,200]); beep(990,0.12); beep(660,0.12);
-      speak('Séance terminée. Bravo !');
-      releaseLock();
+      ring.style.strokeDashoffset=0; linearFill.style.width='100%'; phaseLabel.textContent='✅ Séance terminée'; timeLeftEl.textContent='Bien joué !';
+      vibrate([200,50,200]); beep(990,0.12); beep(660,0.12); speak('Séance terminée. Bravo !');
+      ecoOff();
     }
 
-    // ------- Buttons -------
-    startBtn.addEventListener('click', () => {
-      if(idx===0) start(); else resume();
-    });
+    startBtn.addEventListener('click', ()=>{ ensureAudio(); if(idx===0) start(); else resume(); });
     pauseBtn.addEventListener('click', pause);
     resetBtn.addEventListener('click', resetUI);
 
-    // Presets
-    document.querySelectorAll('.preset').forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        const p = btn.dataset.preset;
-        if(p==='beginner'){ inputs.sets.value=3; inputs.reps.value=10; inputs.contract.value=5; inputs.relax.value=5; inputs.rest.value=20; }
-        if(p==='intermediate'){ inputs.sets.value=3; inputs.reps.value=12; inputs.contract.value=6; inputs.relax.value=6; inputs.rest.value=25; }
-        if(p==='advanced'){ inputs.sets.value=4; inputs.reps.value=15; inputs.contract.value=8; inputs.relax.value=8; inputs.rest.value=30; }
-        if(p==='sprint'){ inputs.sets.value=2; inputs.reps.value=20; inputs.contract.value=2; inputs.relax.value=2; inputs.rest.value=15; }
-        save(); resetUI(); seq = buildPhases(); setTotalEl.textContent = seq.meta.sets; repTotalEl.textContent = seq.meta.reps;
-      });
+    // Éco-écran & mode audio exp.
+    let bgAudioEnabled=false;
+    ecoToggle.addEventListener('click', ()=>{ ecoOverlay.classList.contains('on') ? ecoOff() : ecoOn(); });
+    bgAudioToggle.addEventListener('click', ()=>{
+      bgAudioEnabled=!bgAudioEnabled;
+      bgAudioToggle.classList.toggle('secondary', bgAudioEnabled);
+      alert(bgAudioEnabled
+        ? 'Mode “écran éteint (expérimental)” activé : les bips sont préprogrammés pour continuer si l’écran se verrouille (surtout Android/Chrome). La voix/vibrations peuvent être coupées par le système.'
+        : 'Mode expérimental désactivé.');
     });
 
-    // ------- PWA install prompt -------
+    // Lors d’un (re)démarrage, si mode exp. actif -> programmer la piste
+    const startOrResume = () => { if(bgAudioEnabled){ scheduleBackgroundBeepTrack(); } };
+    startBtn.addEventListener('click', startOrResume);
+    // Si on change de réglages alors que le mode exp. est actif, refaire la piste
+    Object.values(inputs).forEach(el=>el.addEventListener('change', ()=>{ if(bgAudioEnabled){ buildSeq(); scheduleBackgroundBeepTrack(); } }));
+
+    // A2HS
     let deferredPrompt=null;
-    const a2hsBtn = document.getElementById('a2hsBtn');
-    const a2hsText = document.getElementById('a2hsText');
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault(); deferredPrompt = e;
-      a2hsBtn.style.display='inline-block'; a2hsBtn.classList.remove('a2hs');
-      a2hsText.textContent = "Installer l’application ?";
-    });
-    a2hsBtn.addEventListener('click', async () => {
-      if(!deferredPrompt) return;
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      deferredPrompt = null;
-      a2hsText.textContent = outcome==='accepted' ? "Merci ! Application installée." : "Installation annulée (vous pourrez réessayer).";
-      a2hsBtn.style.display='none';
-    });
+    const a2hsBtn=$('#a2hsBtn'), a2hsText=$('#a2hsText');
+    window.addEventListener('beforeinstallprompt',(e)=>{ e.preventDefault(); deferredPrompt=e; a2hsBtn.style.display='inline-block'; a2hsBtn.classList.remove('a2hs'); a2hsText.textContent="Installer l’application ?"; });
+    a2hsBtn.addEventListener('click', async()=>{ if(!deferredPrompt) return; deferredPrompt.prompt(); const {outcome}=await deferredPrompt.userChoice; deferredPrompt=null; a2hsText.textContent = outcome==='accepted' ? "Merci ! Application installée." : "Installation annulée."; a2hsBtn.style.display='none'; });
 
-    // ------- Service worker -------
-    if('serviceWorker' in navigator){
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./service-worker.js').catch(()=>{});
-      });
-    }
+    // Service worker
+    if('serviceWorker' in navigator){ window.addEventListener('load', ()=> navigator.serviceWorker.register('./service-worker.js').catch(()=>{}) ); }
 
     // Init
-    resetUI(); // prepare ring etc.
+    resetUI();
+    // Appliquer le preset courant
+    const cur = PRESETS.find(p=>p.id===currentPresetId) || PRESETS[0]; if(cur) applyPreset(cur);
   })();
   </script>
 </body>
