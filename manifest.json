@@ -4,17 +4,15 @@
   "description": "Exercices de Kegel avec minuteurs personnalisés, cycles et séries. PWA mobile fluide.",
   "start_url": "./",
   "scope": "./",
-  "display": "standalone",
+  "display": "fullscreen",
+  "orientation": "any",
   "background_color": "#0f1220",
   "theme_color": "#7c9df0",
-  "orientation": "any"
   "icons": [
     { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
-
     { "src": "icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
     { "src": "icons/icon-1024-maskable.png", "sizes": "1024x1024", "type": "image/png", "purpose": "maskable" },
-
-    { "src": "icons/apple-touch-icon-180.png", "sizes": "180x180", "type": "image/png", "purpose": "any" }
+    { "src": "icons/apple-touch-icon-180.png", "sizes": "180x180", "type": "image/png" }
   ]
 }

@@ -1,5 +1,5 @@
-/* kegelapp – service worker simple, cache-first + mise à jour en arrière-plan */
-const CACHE_NAME = 'kegelapp-v2'; // <- change v1 -> v2
+/* kegelapp – cache v3 */
+const CACHE_NAME = 'kegelapp-v3';
 const APP_SHELL = [
   './',
   './index.html',
@@ -12,39 +12,29 @@ const APP_SHELL = [
   './icons/apple-touch-icon-180.png'
 ];
 
-self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL))
-  );
+self.addEventListener('install', e => {
+  e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(APP_SHELL)));
   self.skipWaiting();
 });
 
-self.addEventListener('activate', event => {
-  event.waitUntil(
-    (async () => {
-      const keys = await caches.keys();
-      await Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)));
-      await self.clients.claim();
-    })()
-  );
+self.addEventListener('activate', e => {
+  e.waitUntil((async ()=>{
+    const keys = await caches.keys();
+    await Promise.all(keys.filter(k=>k!==CACHE_NAME).map(k=>caches.delete(k)));
+    await self.clients.claim();
+  })());
 });
 
-/* Stratégie: cache d’abord, puis réseau en arrière-plan (stale-while-revalidate) */
-self.addEventListener('fetch', event => {
-  const req = event.request;
-  if (req.method !== 'GET') return;
-
-  event.respondWith((async () => {
+/* cache-first + maj en arrière-plan */
+self.addEventListener('fetch', e => {
+  if (e.request.method !== 'GET') return;
+  e.respondWith((async ()=>{
     const cache = await caches.open(CACHE_NAME);
-    const cached = await cache.match(req);
-    const fetchPromise = fetch(req)
-      .then(res => {
-        if (res && res.status === 200 && res.type === 'basic') {
-          cache.put(req, res.clone());
-        }
-        return res;
-      })
-      .catch(() => cached); // si offline et pas de réseau, on renvoie le cache s’il existe
+    const cached = await cache.match(e.request);
+    const fetchPromise = fetch(e.request).then(res=>{
+      if(res && res.status===200 && res.type==='basic'){ cache.put(e.request, res.clone()); }
+      return res;
+    }).catch(()=>cached);
     return cached || fetchPromise;
   })());
 });
