@@ -1,16 +1,19 @@
 {
-  "name": "Mon Timer Kegel",
-  "short_name": "Kegel",
-  "id": "kegel-timer",
-  "start_url": "./index.html",
+  "name": "KegelApp",
+  "short_name": "KegelApp",
+  "description": "Exercices de Kegel avec minuteurs personnalisés, cycles et séries. PWA mobile fluide.",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#0b1220",
-  "theme_color": "#317EFB",
+  "background_color": "#0f1220",
+  "theme_color": "#7c9df0",
   "icons": [
-    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
-  ],
-  "prefer_related_applications": false
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+
+    { "src": "icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon-1024-maskable.png", "sizes": "1024x1024", "type": "image/png", "purpose": "maskable" },
+
+    { "src": "icons/apple-touch-icon-180.png", "sizes": "180x180", "type": "image/png", "purpose": "any" }
+  ]
 }
