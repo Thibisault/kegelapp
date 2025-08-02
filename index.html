@@ -188,232 +188,256 @@
   <button id="floatingInstall" class="btn primary floating-install" hidden>Installer KegelApp</button>
 
   <script>
-    // ------- Helpers UI -------
-    const $ = sel => document.querySelector(sel);
-    const fmt = s => {
-      s = Math.max(0, Math.round(s));
-      const m = Math.floor(s/60).toString().padStart(2,'0');
-      const ss = (s%60).toString().padStart(2,'0');
-      return `${m}:${ss}`;
-    };
+  // ------- Helpers UI -------
+  const $ = sel => document.querySelector(sel);
+  const fmt = s => {
+    s = Math.max(0, Math.round(s));
+    const m = Math.floor(s/60).toString().padStart(2,'0');
+    const ss = (s%60).toString().padStart(2,'0');
+    return `${m}:${ss}`;
+  };
 
-    // ------- Local state -------
-    const state = {
-      prep: +$('#prep').value,
-      squeeze: +$('#squeeze').value,
-      relax: +$('#relax').value,
-      cycles: +$('#cycles').value,
-      sets: +$('#sets').value,
-      rest: +$('#rest').value,
-      running: false,
-      phase: 'prepare', // prepare | squeeze | relax | rest | done
-      cycleIndex: 0,
-      setIndex: 0,
-      remaining: 0,
-      totalPhase: 0,
-      raf: 0,
-      startTs: 0,
-    };
+  // ------- Install UI (A2HS) -------
+  const installBtns = [document.getElementById('installBtn'), document.getElementById('floatingInstall')];
+  const showInstall = show => installBtns.forEach(b => b.hidden = !show);
+  const isStandalone = () =>
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true; // iOS
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
 
-    // Persist
-    const load = () => {
-      const saved = localStorage.getItem('kegelapp:v1');
-      if(saved){
-        const cfg = JSON.parse(saved);
-        ['prep','squeeze','relax','cycles','sets','rest'].forEach(k=>{
-          if (typeof cfg[k] !== 'undefined') {
-            document.getElementById(k).value = cfg[k];
-          }
-        });
-      }
-    };
-    const save = () => {
-      const cfg = ['prep','squeeze','relax','cycles','sets','rest'].reduce((o,k)=>{
-        o[k] = +document.getElementById(k).value; return o;
-      },{});
-      localStorage.setItem('kegelapp:v1', JSON.stringify(cfg));
-    };
-    load();
+  let deferredPrompt = null;
+  // Par défaut : ne montre pas les boutons
+  showInstall(false);
 
-    // ------- Programmes prédéfinis -------
-    $('#program').addEventListener('change', (e)=>{
-      if(e.target.value === 'custom') return;
-      try{
-        const p = JSON.parse(e.target.value);
-        $('#prep').value = p.prep; $('#squeeze').value = p.squeeze; $('#relax').value = p.relax;
-        $('#cycles').value = p.cycles; $('#sets').value = p.sets; $('#rest').value = p.rest;
-        save();
-      }catch{}
+  // Afficher le bouton uniquement si l’évènement est dispo ET qu’on n’est pas déjà installé.
+  window.addEventListener('beforeinstallprompt', (e) => {
+    if (isStandalone() || isIOS) return; // iOS n’a pas cet event
+    e.preventDefault();
+    deferredPrompt = e;
+    showInstall(true);
+  });
+
+  window.addEventListener('appinstalled', () => {
+    deferredPrompt = null;
+    showInstall(false);
+  });
+
+  // Au chargement, si on est déjà en PWA → cacher
+  if (isStandalone()) showInstall(false);
+
+  installBtns.forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!deferredPrompt) return; // pas pris en charge par l’appareil
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') showInstall(false);
+      deferredPrompt = null;
     });
+  });
 
-    // ------- Audio & Vibration -------
-    let audioCtx;
-    const beep = (ms=140, freq=880) => {
-      try{
-        audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-        const o = audioCtx.createOscillator();
-        const g = audioCtx.createGain();
-        o.connect(g); g.connect(audioCtx.destination);
-        o.type='sine'; o.frequency.value=freq; g.gain.setValueAtTime(0.0001, audioCtx.currentTime);
-        g.gain.exponentialRampToValueAtTime(0.4, audioCtx.currentTime + 0.02);
-        o.start();
-        setTimeout(()=>{ g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.02); o.stop(); }, ms);
-      }catch{}
-    };
-    const vib = pat => { if (navigator.vibrate) navigator.vibrate(pat); };
+  // ------- Local state -------
+  const state = {
+    prep: +$('#prep').value,
+    squeeze: +$('#squeeze').value,
+    relax: +$('#relax').value,
+    cycles: +$('#cycles').value,
+    sets: +$('#sets').value,
+    rest: +$('#rest').value,
+    running: false,
+    phase: 'prepare',
+    cycleIndex: 0,
+    setIndex: 0,
+    remaining: 0,
+    totalPhase: 0,
+    raf: 0,
+    startTs: 0,
+  };
 
-    // ------- Wake Lock (évite que l’écran s’éteigne) -------
-    let wakeLock;
-    async function lockScreen(){
-      try{
-        wakeLock = await navigator.wakeLock.request('screen');
-        $('#statusLock').textContent = 'Veille: activée';
-        wakeLock.addEventListener('release', ()=>$('#statusLock').textContent='Veille');
-      }catch(e){ $('#statusLock').textContent = 'Veille non dispo'; }
+  // Persist
+  const load = () => {
+    const saved = localStorage.getItem('kegelapp:v1');
+    if(saved){
+      const cfg = JSON.parse(saved);
+      ['prep','squeeze','relax','cycles','sets','rest'].forEach(k=>{
+        if (typeof cfg[k] !== 'undefined') {
+          document.getElementById(k).value = cfg[k];
+        }
+      });
     }
-    document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible' && state.running) lockScreen(); });
+  };
+  const save = () => {
+    const cfg = ['prep','squeeze','relax','cycles','sets','rest'].reduce((o,k)=>{
+      o[k] = +document.getElementById(k).value; return o;
+    },{});
+    localStorage.setItem('kegelapp:v1', JSON.stringify(cfg));
+  };
+  load();
 
-    // ------- Orientation ------
-    function onOrient(){
-      document.body.classList.toggle('landscape', (screen.orientation?.type||'').includes('landscape') || window.innerWidth>window.innerHeight);
-      $('#statusOrient').textContent = 'Orientation: ' + (document.body.classList.contains('landscape')? 'paysage' : 'portrait');
-    }
-    window.addEventListener('orientationchange', onOrient);
-    window.addEventListener('resize', onOrient);
-    onOrient();
-
-    // ------- Progress ring -------
-    const CIRC = 2 * Math.PI * 45; // r=45
-    const $prog = $('#progress');
-    function setProgress(p){ // 0..1
-      $prog.style.strokeDasharray = CIRC.toFixed(3);
-      $prog.style.strokeDashoffset = (CIRC * (1 - p)).toFixed(3);
-    }
-
-    // ------- Flow du minuteur -------
-    function readInputs(){
-      state.prep = +$('#prep').value;
-      state.squeeze = +$('#squeeze').value;
-      state.relax = +$('#relax').value;
-      state.cycles = +$('#cycles').value;
-      state.sets = +$('#sets').value;
-      state.rest = +$('#rest').value;
+  // Programmes prédéfinis
+  $('#program').addEventListener('change', (e)=>{
+    if(e.target.value === 'custom') return;
+    try{
+      const p = JSON.parse(e.target.value);
+      $('#prep').value = p.prep; $('#squeeze').value = p.squeeze; $('#relax').value = p.relax;
+      $('#cycles').value = p.cycles; $('#sets').value = p.sets; $('#rest').value = p.rest;
       save();
-    }
+    }catch{}
+  });
 
-    function setPhase(phase, dur){
-      state.phase = phase;
-      state.remaining = dur;
-      state.totalPhase = dur;
-      state.startTs = performance.now();
-      $('#phase').textContent = (
-        phase==='prepare' ? 'Préparation' :
-        phase==='squeeze' ? 'Serrer' :
-        phase==='relax' ? 'Relâcher' :
-        phase==='rest'   ? 'Repos' :
-        phase==='done'   ? 'Terminé' : ''
-      );
-      setProgress(0);
-      $('#time').textContent = fmt(dur);
-      if(phase==='squeeze') { vib([80,40,80]); beep(120, 920); }
-      else if(phase==='relax'){ vib(60); beep(90, 640); }
-      else if(phase==='rest') { vib([100,50,100,50,120]); beep(180, 520); }
-    }
+  // ------- Audio & Vibration -------
+  let audioCtx;
+  const beep = (ms=140, freq=880) => {
+    try{
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.connect(g); g.connect(audioCtx.destination);
+      o.type='sine'; o.frequency.value=freq; g.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.4, audioCtx.currentTime + 0.02);
+      o.start();
+      setTimeout(()=>{ g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.02); o.stop(); }, ms);
+    }catch{}
+  };
+  const vib = pat => { if (navigator.vibrate) navigator.vibrate(pat); };
 
-    function nextPhase(){
-      if(!state.running) return;
-      if(state.phase==='prepare') {
-        state.cycleIndex = 0; state.setIndex = 0;
-        setPhase('squeeze', state.squeeze);
-      }
-      else if(state.phase==='squeeze'){
-        setPhase('relax', state.relax);
-      }
-      else if(state.phase==='relax'){
-        state.cycleIndex++;
-        if(state.cycleIndex < state.cycles){ setPhase('squeeze', state.squeeze); }
-        else {
-          state.setIndex++;
-          if(state.setIndex < state.sets){
-            setPhase('rest', state.rest);
-          } else {
-            setPhase('done', 0);
-            stopTimer();
-          }
+  // ------- Wake Lock -------
+  let wakeLock;
+  async function lockScreen(){
+    try{
+      wakeLock = await navigator.wakeLock.request('screen');
+      $('#statusLock').textContent = 'Veille: activée';
+      wakeLock.addEventListener('release', ()=>$('#statusLock').textContent='Veille');
+    }catch(e){ $('#statusLock').textContent = 'Veille non dispo'; }
+  }
+  document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible' && state.running) lockScreen(); });
+
+  // ------- Orientation (rotation auto) -------
+  // Utilise matchMedia (fiable iOS/Android) + resize
+  const mql = window.matchMedia('(orientation: landscape)');
+  function applyOrientation(){
+    const landscape = mql.matches || (window.innerWidth > window.innerHeight);
+    document.body.classList.toggle('landscape', landscape);
+    $('#statusOrient').textContent = 'Orientation: ' + (landscape ? 'paysage' : 'portrait');
+  }
+  if (mql.addEventListener) mql.addEventListener('change', applyOrientation);
+  else mql.addListener(applyOrientation); // vieux Safari
+  window.addEventListener('resize', applyOrientation);
+  applyOrientation();
+
+  // ------- Progress ring -------
+  const CIRC = 2 * Math.PI * 45; // r=45
+  const $prog = $('#progress');
+  function setProgress(p){ $prog.style.strokeDasharray = CIRC.toFixed(3); $prog.style.strokeDashoffset = (CIRC * (1 - p)).toFixed(3); }
+
+  // ------- Flow du minuteur -------
+  function readInputs(){
+    state.prep = +$('#prep').value;
+    state.squeeze = +$('#squeeze').value;
+    state.relax = +$('#relax').value;
+    state.cycles = +$('#cycles').value;
+    state.sets = +$('#sets').value;
+    state.rest = +$('#rest').value;
+    save();
+  }
+
+  function setPhase(phase, dur){
+    state.phase = phase;
+    state.remaining = dur;
+    state.totalPhase = dur;
+    state.startTs = performance.now();
+    $('#phase').textContent = (
+      phase==='prepare' ? 'Préparation' :
+      phase==='squeeze' ? 'Serrer' :
+      phase==='relax' ? 'Relâcher' :
+      phase==='rest'   ? 'Repos' :
+      phase==='done'   ? 'Terminé' : ''
+    );
+    setProgress(0);
+    $('#time').textContent = fmt(dur);
+    if(phase==='squeeze') { vib([80,40,80]); beep(120, 920); }
+    else if(phase==='relax'){ vib(60); beep(90, 640); }
+    else if(phase==='rest') { vib([100,50,100,50,120]); beep(180, 520); }
+  }
+
+  function nextPhase(){
+    if(!state.running) return;
+    if(state.phase==='prepare') {
+      state.cycleIndex = 0; state.setIndex = 0;
+      setPhase('squeeze', state.squeeze);
+    }
+    else if(state.phase==='squeeze'){
+      setPhase('relax', state.relax);
+    }
+    else if(state.phase==='relax'){
+      state.cycleIndex++;
+      if(state.cycleIndex < state.cycles){ setPhase('squeeze', state.squeeze); }
+      else {
+        state.setIndex++;
+        if(state.setIndex < state.sets){
+          setPhase('rest', state.rest);
+        } else {
+          setPhase('done', 0);
+          stopTimer();
         }
       }
-      else if(state.phase==='rest'){
-        state.cycleIndex = 0;
-        setPhase('squeeze', state.squeeze);
+    }
+    else if(state.phase==='rest'){
+      state.cycleIndex = 0;
+      setPhase('squeeze', state.squeeze);
+    }
+  }
+
+  function tick(ts){
+    if(!state.running) return;
+    const elapsed = (ts - state.startTs)/1000;
+    const left = Math.max(0, state.totalPhase - elapsed);
+    state.remaining = left;
+    $('#time').textContent = fmt(left);
+    setProgress( state.totalPhase ? (elapsed / state.totalPhase) : 1 );
+    if(left <= 0.02){ nextPhase(); return; }
+    state.raf = requestAnimationFrame(tick);
+  }
+
+  function startTimer(){
+    readInputs();
+    state.running = true;
+    $('#start').disabled = true;
+    $('#stop').disabled = false;
+    lockScreen();
+    // ❌ on ne verrouille plus l’orientation → la rotation reste active
+    // try{ screen.orientation && screen.orientation.lock('portrait'); }catch{}
+    setPhase('prepare', state.prep);
+    cancelAnimationFrame(state.raf);
+    state.raf = requestAnimationFrame(tick);
+  }
+  function stopTimer(){
+    state.running = false;
+    cancelAnimationFrame(state.raf);
+    $('#start').disabled = false;
+    $('#stop').disabled = true;
+    $('#phase').textContent = 'Pause';
+    try{ wakeLock?.release(); }catch{}
+  }
+  $('#start').addEventListener('click', startTimer);
+  $('#stop').addEventListener('click', stopTimer);
+
+  // ------- Service worker -------
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', async ()=>{
+      try{
+        const reg = await navigator.serviceWorker.register('./sw.js', { scope: './' });
+        $('#statusOffline').textContent = 'Hors-ligne: OK';
+        console.log('SW registered', reg);
+      }catch(e){
+        $('#statusOffline').textContent = 'Hors-ligne indisponible';
+        console.warn('SW failed', e);
       }
-    }
-
-    function tick(ts){
-      if(!state.running) return;
-      const elapsed = (ts - state.startTs)/1000;
-      const left = Math.max(0, state.totalPhase - elapsed);
-      state.remaining = left;
-      $('#time').textContent = fmt(left);
-      setProgress( state.totalPhase ? (elapsed / state.totalPhase) : 1 );
-      if(left <= 0.02){ nextPhase(); return; }
-      state.raf = requestAnimationFrame(tick);
-    }
-
-    function startTimer(){
-      readInputs();
-      state.running = true;
-      $('#start').disabled = true;
-      $('#stop').disabled = false;
-      lockScreen();
-      try{ screen.orientation && screen.orientation.lock('portrait'); }catch{}
-      setPhase('prepare', state.prep);
-      cancelAnimationFrame(state.raf);
-      state.raf = requestAnimationFrame(tick);
-    }
-    function stopTimer(){
-      state.running = false;
-      cancelAnimationFrame(state.raf);
-      $('#start').disabled = false;
-      $('#stop').disabled = true;
-      $('#phase').textContent = 'Pause';
-      try{ wakeLock?.release(); }catch{}
-    }
-    $('#start').addEventListener('click', startTimer);
-    $('#stop').addEventListener('click', stopTimer);
-
-    // ------- Install (A2HS) -------
-    let deferredPrompt;
-    const installBtns = [$('#installBtn'), $('#floatingInstall')];
-    window.addEventListener('beforeinstallprompt', (e)=>{
-      e.preventDefault(); deferredPrompt = e;
-      installBtns.forEach(b=>b.hidden=false);
     });
-    installBtns.forEach(btn=>{
-      btn.addEventListener('click', async ()=>{
-        if(!deferredPrompt) return;
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        if(outcome === 'accepted'){ installBtns.forEach(b=>b.hidden=true); }
-        deferredPrompt = null;
-      });
-    });
+  }
 
-    // ------- Service worker -------
-    if('serviceWorker' in navigator){
-      window.addEventListener('load', async ()=>{
-        try{
-          const reg = await navigator.serviceWorker.register('./sw.js', { scope: './' });
-          $('#statusOffline').textContent = 'Hors-ligne: OK';
-          console.log('SW registered', reg);
-        }catch(e){
-          $('#statusOffline').textContent = 'Hors-ligne indisponible';
-          console.warn('SW failed', e);
-        }
-      });
-    }
+  // Auto-save
+  document.querySelectorAll('input,select').forEach(el=>el.addEventListener('change', save));
+</script>
 
-    // Enregistre automatiquement dès qu’un champ change
-    document.querySelectorAll('input,select').forEach(el=>el.addEventListener('change', save));
-  </script>
 </body>
 </html>

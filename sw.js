@@ -1,5 +1,5 @@
 /* kegelapp – service worker simple, cache-first + mise à jour en arrière-plan */
-const CACHE_NAME = 'kegelapp-v1';
+const CACHE_NAME = 'kegelapp-v2'; // <- change v1 -> v2
 const APP_SHELL = [
   './',
   './index.html',
