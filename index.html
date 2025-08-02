@@ -1,14 +1,15 @@
 <!doctype html>
 <html lang="fr">
-
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <!-- Mobile-friendly viewport + notch support -->
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="format-detection" content="telephone=no" />
   <title>Kegel – Fonctions sexuelles (avec difficulté globale)</title>
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#317EFB">
+  <meta name="theme-color" content="#0b1220">
 
   <!-- iOS (plein écran + icône) -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -20,64 +21,132 @@
 
   <style>
     :root{
-      --bg:#0f172a; --card:#111827; --muted:#334155; --text:#e5e7eb;
+      --bg:#0b1220; --bg2:#0f172a; --card:#111827; --muted:#334155; --text:#e5e7eb;
       --accent:#22c55e; --accent-weak:#16a34a; --red:#ef4444; --border:#1f2937;
+      --shadow:0 10px 30px rgba(0,0,0,.35);
+      --radius:16px;
+      --pad:16px;
     }
-    *{box-sizing:border-box}
+
+    /* Reset mobile-friendly */
+    *,*::before,*::after{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    html{ -webkit-text-size-adjust:100%; }
     body{
-      margin:0; padding:20px; background:linear-gradient(180deg,#0b1220,#0f172a 120%);
-      color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;
+      margin:0; padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right))
+                     calc(14px + env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+      background:linear-gradient(180deg,var(--bg),var(--bg2) 120%);
+      color:var(--text);
+      font-family: system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;
       display:flex; justify-content:center;
+      line-height:1.4;
+      -webkit-tap-highlight-color: transparent;
     }
-    .app{width:100%; max-width:960px; display:grid; gap:14px}
-    h1{margin:0 0 6px; font-size:clamp(22px,4vw,32px)}
-    .subtle{opacity:.85; font-size:.95rem}
+
+    .app{ width:100%; max-width:720px; display:grid; gap:14px; }
+
+    h1{ margin:0 0 6px; font-weight:800; letter-spacing:.2px;
+        font-size: clamp(22px, 4.5vw, 30px); }
+    .subtle{ opacity:.9; font-size:.95rem }
+
     .card{
-      background:rgba(17,24,39,.85); border:1px solid var(--border); border-radius:16px; padding:16px;
-      box-shadow:0 8px 24px rgba(0,0,0,.25); backdrop-filter: blur(6px);
+      background:rgba(17,24,39,.88); border:1px solid var(--border); border-radius:var(--radius); padding:var(--pad);
+      box-shadow:var(--shadow); backdrop-filter: blur(6px);
     }
-    .grid{display:grid; gap:12px}
-    @media(min-width:900px){ .grid-2{grid-template-columns:1.2fr .8fr} }
-    .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
-    label{font-size:.95rem; opacity:.9}
+    .grid{ display:grid; gap:12px }
+    /* Mobile d'abord : 1 colonne ; desktop : 2 colonnes */
+    .grid-2{ grid-template-columns: 1fr; }
+    @media (min-width: 900px){
+      .grid-2{ grid-template-columns: 1.2fr .8fr; align-items:start; }
+      .col-timer{ order: 2; position: static; }
+      .controls-row{ position: static; }
+    }
+
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center }
+    label{ font-size:1rem; opacity:.95 }
+
     select{
-      background:#0b1220; border:1px solid var(--border); color:var(--text);
-      border-radius:10px; padding:10px 12px; min-height:42px; width:100%;
+      appearance:none;
+      background:#0b1220;
+      border:1px solid var(--border);
+      color:var(--text);
+      border-radius:12px;
+      padding:12px 14px;
+      min-height:48px;
+      width:100%;
+      font-size:1rem;
     }
+
     button{
-      border:0; border-radius:12px; padding:12px 16px; font-weight:700; cursor:pointer; color:white; background:var(--muted);
-      transition:.15s transform ease, .15s filter ease; min-height:44px;
+      border:0; border-radius:14px; padding:14px 16px; font-weight:800; cursor:pointer; color:white; background:var(--muted);
+      transition:.15s transform ease, .15s filter ease, .2s box-shadow ease; min-height:48px; flex:1 1 auto;
+      touch-action: manipulation;
     }
-    button:hover{filter:brightness(1.07)} button:active{transform:translateY(1px)}
-    .primary{background:linear-gradient(180deg,var(--accent),var(--accent-weak))}
-    .ghost{background:#0b1220; border:1px solid #293042}
-    .danger{background:linear-gradient(180deg,#ef4444,#b91c1c)}
-    .badge{display:inline-flex; gap:6px; align-items:center; padding:6px 10px; border-radius:999px; background:#0b1220; border:1px solid #253042; font-size:.9rem}
-    .big{font-size:clamp(40px,10vw,64px); font-weight:800; letter-spacing:1px; margin:4px 0 6px; text-align:center}
-    .sub{text-align:center; opacity:.9}
-    .progress{height:16px; background:#0b1220; border:1px solid var(--border); border-radius:999px; overflow:hidden}
-    .bar{height:100%; width:0%; background:linear-gradient(90deg,#22c55e,#86efac)}
-    .kpi{display:flex; justify-content:space-between; font-variant-numeric:tabular-nums}
-    .list{display:flex; flex-wrap:wrap; gap:8px}
+    button:hover{ filter:brightness(1.07) }
+    button:active{ transform:translateY(1px) }
+    .primary{ background:linear-gradient(180deg,var(--accent),var(--accent-weak)); box-shadow: inset 0 -2px 0 rgba(0,0,0,.2); }
+    .ghost{ background:#0b1220; border:1px solid #293042 }
+    .danger{ background:linear-gradient(180deg,#ef4444,#b91c1c) }
+
+    .badge{
+      display:inline-flex; gap:8px; align-items:center; padding:8px 12px; border-radius:999px;
+      background:#0b1220; border:1px solid #253042; font-size:.95rem; min-height:40px;
+    }
+
+    .big{ font-size: clamp(42px, 11vw, 64px); font-weight:900; letter-spacing:.5px; margin:8px 0 6px; text-align:center }
+    .sub{ text-align:center; opacity:.95; font-size:1.05rem }
+    .kpi{ display:flex; justify-content:space-between; font-variant-numeric:tabular-nums; font-size:.98rem }
+
+    .progress{ height:18px; background:#0b1220; border:1px solid var(--border); border-radius:999px; overflow:hidden }
+    .bar{ height:100%; width:0%; background:linear-gradient(90deg,#22c55e,#86efac) }
+
+    .list{ display:flex; flex-wrap:wrap; gap:8px }
 
     /* Aide */
-    details.help{border:1px solid #273043; border-radius:12px; padding:10px 12px; background:#0b1220}
-    details.help[open]{background:#0c1426}
-    details.help summary{cursor:pointer; font-weight:700; margin-bottom:6px}
-    ul{margin:6px 0 0 18px}
-    small{opacity:.8}
+    details.help{ border:1px solid #273043; border-radius:12px; padding:10px 12px; background:#0b1220 }
+    details.help[open]{ background:#0c1426 }
+    details.help summary{ cursor:pointer; font-weight:800; margin-bottom:6px }
+    ul{ margin:6px 0 0 18px }
+    small{ opacity:.85 }
 
-    /* Barre de difficulté (10 carrés) */
-    .diff-wrap{display:flex; align-items:center; gap:12px}
-    .diffbar{ display:flex; gap:6px; align-items:center; outline:none; }
+    /* Barre de difficulté */
+    .diff-wrap{ display:flex; align-items:center; gap:12px; flex-wrap:wrap }
+    .diffbar{ display:flex; gap:8px; align-items:center; outline:none; }
     .cell{
-      width:26px; height:26px; border-radius:6px; border:1px solid #253042; background:#0b1220;
+      width: clamp(28px, 7vw, 34px); height: clamp(28px, 7vw, 34px);
+      border-radius:8px; border:1px solid #253042; background:#0b1220;
       transition:transform .12s ease, filter .12s ease, background .12s ease;
     }
-    .cell.active{background:linear-gradient(180deg,var(--accent),var(--accent-weak)); border-color:#1f8e4d}
-    .cell:hover{filter:brightness(1.07); cursor:pointer}
-    .diff-text{min-width:140px; font-variant-numeric:tabular-nums}
-    .hint{font-size:.9rem; opacity:.85}
+    .cell.active{ background:linear-gradient(180deg,var(--accent),var(--accent-weak)); border-color:#1f8e4d }
+    .cell:hover{ filter:brightness(1.07); cursor:pointer }
+    .diff-text{ min-width:150px; font-variant-numeric:tabular-nums; font-weight:700 }
+    .hint{ font-size:.95rem; opacity:.9 }
+
+    /* Contrôles collants (restent accessibles en bas sur mobile) */
+    .controls-row{
+      position: sticky; bottom: max(8px, env(safe-area-inset-bottom));
+      background: rgba(11,18,32,.75);
+      border:1px solid var(--border);
+      border-radius: 16px;
+      padding: 8px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      z-index: 10;
+    }
+
+    /* Bannière d’installation PWA (apparition si possible) */
+    .install-banner{
+      display:none; position: sticky; top: max(8px, env(safe-area-inset-top)); z-index: 20;
+      padding:10px 12px; border-radius:14px; border:1px solid #253042; background:#0c1426; box-shadow:var(--shadow);
+    }
+    .install-banner.show{ display:block; }
+    .install-banner .row{ gap:8px }
+    .install-banner button{ flex:0 0 auto }
+
+    /* Réduction des animations si demandé */
+    @media (prefers-reduced-motion: reduce){
+      *{ transition: none !important; }
+    }
   </style>
 
   <!-- Enregistrement du Service Worker -->
@@ -93,7 +162,24 @@
 </head>
 
 <body>
-  <main class="app">
+  <main class="app" id="appRoot">
+    <!-- Bannière d'installation PWA -->
+    <section id="installBanner" class="install-banner" aria-live="polite" aria-atomic="true">
+      <div class="row" style="justify-content:space-between; align-items:center">
+        <div style="display:flex; gap:10px; align-items:center;">
+          <img src="icons/icon-192.png" width="28" height="28" alt="" style="border-radius:6px;"/>
+          <div>
+            <div style="font-weight:800">Installer l’app</div>
+            <small>Ajoute « Kegel » à l’écran d’accueil pour un accès rapide.</small>
+          </div>
+        </div>
+        <div class="row" style="flex-wrap:nowrap">
+          <button id="installBtn" class="primary" style="min-width:140px">Installer</button>
+          <button id="dismissInstall" class="ghost" aria-label="Fermer">Plus tard</button>
+        </div>
+      </div>
+    </section>
+
     <header>
       <h1>Kegel – Fonctions sexuelles masculines</h1>
       <div class="subtle">Réglez la <b>difficulté globale</b>, choisissez une <b>catégorie</b> puis un <b>exercice</b>. Lisez l’<b>Aide & Technique</b>, puis appuyez sur <b>Démarrer</b>.</div>
@@ -109,12 +195,12 @@
         </div>
         <div id="diffText" class="diff-text">5/10 — Modéré</div>
       </div>
-      <div class="hint">Astuce : ajustez la difficulté <b>avant</b> de démarrer. Si vous la changez pendant un timer, elle s’appliquera à la séance suivante.</div>
+      <div class="hint">Astuce : ajustez la difficulté <b>avant</b> de démarrer. Si vous la changez pendant un timer, elle s’appliquera à la séance suivante.</div>
     </section>
 
     <section class="card grid grid-2">
       <!-- Colonne gauche: Sélection & Aide -->
-      <div class="grid">
+      <div class="grid col-selectors">
         <div class="grid">
           <label for="catSelect">Catégorie (objectif)</label>
           <select id="catSelect" aria-label="Catégorie"></select>
@@ -139,8 +225,8 @@
         <small>En cas de douleur/tension pelvienne persistante ou de troubles urinaires, réduisez l’intensité, privilégiez les <i>reverse Kegels</i>, et demandez un avis professionnel.</small>
       </div>
 
-      <!-- Colonne droite: Timer -->
-      <div class="grid">
+      <!-- Colonne droite: Timer (affiché en premier sur mobile) -->
+      <div class="grid col-timer" style="order:-1">
         <div class="sub" id="phaseLabel">Prêt</div>
         <div class="big" id="timeDisplay">00:00</div>
         <div class="kpi">
@@ -150,7 +236,7 @@
         <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="Progression">
           <div class="bar" id="progressBar"></div>
         </div>
-        <div class="row">
+        <div class="row controls-row">
           <button id="startBtn" class="primary">Démarrer</button>
           <button id="pauseBtn" class="ghost" disabled>Pause</button>
           <button id="resetBtn" class="danger" disabled>Réinitialiser</button>
@@ -159,17 +245,12 @@
     </section>
 
     <footer class="subtle">
-      <small>Application éducative : réglages généraux basés sur de bonnes pratiques de plancher pelvien. Zéro douleur, souffle libre, relâche complet entre phases.</small>
+      <small>Application éducative : réglages généraux basés sur de bonnes pratiques de plancher pelvien. Zéro douleur, souffle libre, relâche complet entre phases.</small>
     </footer>
   </main>
 
   <script>
     // ====== Données : catégories & exercices (paramètres de base) ======
-    // Types:
-    // - 'interval' : alternance travail/repos avec répétitions et cycles
-    // - 'sequence' : liste d'étapes nommées, avec cycles
-    // - 'info'     : fiche aide sans timer
-    // Chaque exercice a un "profile" définissant la façon d'adapter la difficulté.
     const CATEGORIES = [
       {
         id:'erection', name:'Érection & maintien', exercises:[
@@ -186,7 +267,7 @@
             base:{work:1, rest:1, reps:30, cycles:1, restBetweenCycles:0}, profile:'quick',
             help:{
               tech:['Contractions brèves, nettes, sans crispation globale.'],
-              breath:['Souffle fluide ; micro‑expirs possibles.'],
+              breath:['Souffle fluide ; micro-expirs possibles.'],
               errors:['Ne serrez pas les fessiers.'],
               progress:['Augmentez par paquets de 5.']
             }
@@ -200,7 +281,7 @@
               progress:['Augmenter par pas de 5 s maximum.']
             }
           },
-          { id:'ladder', name:'Pyramide (2‑4‑6‑8‑6‑4‑2)', type:'sequence',
+          { id:'ladder', name:'Pyramide (2-4-6-8-6-4-2)', type:'sequence',
             steps:[{label:'2 s',seconds:2},{label:'4 s',seconds:4},{label:'6 s',seconds:6},{label:'8 s',seconds:8},{label:'6 s',seconds:6},{label:'4 s',seconds:4},{label:'2 s',seconds:2}],
             base:{cycles:1, restBetweenCycles:0}, profile:'pyramid',
             help:{
@@ -278,7 +359,7 @@
             base:{work:1, rest:1, reps:20, cycles:1, restBetweenCycles:0}, profile:'pulses',
             help:{
               tech:['Contractions brèves, rythmées, sans augmenter la pression abdominale.'],
-              breath:['Souffle libre ; micro‑expirs possibles.'],
+              breath:['Souffle libre ; micro-expirs possibles.'],
               errors:['Pas de crispation globale.'],
               progress:['Ajoutez 2–4 pulses quand c’est facile.']
             }
@@ -296,7 +377,7 @@
       },
       {
         id:'comfort', name:'Confort / détente (tension pelvienne)', exercises:[
-          { id:'revtonic', name:'Reverse toniques (anti‑tension)', type:'interval', labels:{work:'Relâche', rest:'Neutre'},
+          { id:'revtonic', name:'Reverse toniques (anti-tension)', type:'interval', labels:{work:'Relâche', rest:'Neutre'},
             base:{work:20, rest:10, reps:10, cycles:1, restBetweenCycles:0}, profile:'reverse',
             help:{
               tech:['Sentez l’ouverture à l’inspiration, laissez le ventre se gonfler.'],
@@ -307,8 +388,8 @@
           },
           { id:'diaph', name:'Respiration diaphragmatique (fiche)', type:'info',
             help:{
-              tech:['Allongé, mains sur le bas‑ventre : inspirez (ventre monte), expirez longuement.'],
-              tips:['5–10 respirations, 2–3 postures (papillon, happy baby, 90‑90).']
+              tech:['Allongé, mains sur le bas-ventre : inspirez (ventre monte), expirez longuement.'],
+              tips:['5–10 respirations, 2–3 postures (papillon, happy baby, 90-90).']
             }
           }
         ]
@@ -337,6 +418,8 @@
     function beep(freq=600, ms=120){
       if(!$('soundToggle').checked) return;
       const ctx=ensureAudio(); if(!ctx) return;
+      // Débloque l'audio sur iOS à la 1ère interaction
+      if (ctx.state === 'suspended') { ctx.resume().catch(()=>{}); }
       const o=ctx.createOscillator(); const g=ctx.createGain();
       o.type='sine'; o.frequency.value=freq;
       g.gain.setValueAtTime(0.0001, ctx.currentTime);
@@ -382,8 +465,7 @@
       diffBar.setAttribute('aria-valuenow', String(difficulty));
       diffText.textContent = diffLabel(difficulty);
       [...diffBar.children].forEach((cell,i)=>{ cell.classList.toggle('active', i < difficulty); });
-      // Mettre à jour l'aide/les résumés selon difficulté
-      renderExerciseInfo(); // n'interrompt pas un timer en cours
+      renderExerciseInfo();
     }
     function buildDiffBar(){
       diffBar.innerHTML='';
@@ -391,9 +473,8 @@
         const cell=document.createElement('div');
         cell.className='cell'; if(i<=difficulty) cell.classList.add('active');
         cell.title=`Niveau ${i}`;
-        cell.addEventListener('click', ()=>{
-          difficulty=i; savePref('difficulty', difficulty); updateDiffUI();
-        });
+        cell.tabIndex = 0;
+        cell.addEventListener('click', ()=>{ difficulty=i; savePref('difficulty', difficulty); updateDiffUI(); });
         diffBar.appendChild(cell);
       }
       diffBar.addEventListener('keydown',(e)=>{
@@ -404,19 +485,16 @@
     }
 
     // ====== Adaptation des exercices à la difficulté ======
-    // t ∈ [0,1] mappe 1..10 → 0..1
     function tFromD(d){ return (clamp(d,1,10)-1)/9; }
-
     function intensityAdvice(d){
-      if(d<=3) return 'Intensité conseillée : 20–40 % (position allongé/assis).';
-      if(d<=7) return 'Intensité conseillée : 40–60 % (assis/debout).';
-      return 'Intensité conseillée : 60–75 % (debout/en mouvement, jamais 100 %).';
+      if(d<=3) return 'Intensité conseillée : 20–40 % (position allongé/assis).';
+      if(d<=7) return 'Intensité conseillée : 40–60 % (assis/debout).';
+      return 'Intensité conseillée : 60–75 % (debout/en mouvement, jamais 100 %).';
     }
 
-    // Renvoie un "exercice réglé" pour la difficulté courante
     function tuneExercise(ex, d){
       const t = tFromD(d);
-      const copy = JSON.parse(JSON.stringify(ex)); // clone simple
+      const copy = JSON.parse(JSON.stringify(ex)); // clone
 
       if(ex.type==='interval'){
         let {work,rest,reps,cycles,restBetweenCycles} = ex.base;
@@ -431,7 +509,6 @@
             break;
           }
           case 'quick': {
-            // Pulses: garder 1/1 mais augmenter le volume (reps) et éventuellement les cycles
             const repsMin=18, repsMax=42;
             reps = Math.max(8, Math.round(lerp(repsMin, repsMax, t)));
             work = 1; rest = 1;
@@ -452,11 +529,10 @@
             const repsMin=12, repsMax=28;
             reps = Math.round(lerp(repsMin, repsMax, t));
             work = 1;
-            rest = roundSec(lerp(1.2, 0.6, t)); // repos un peu plus court en haut
+            rest = roundSec(lerp(1.2, 0.6, t));
             break;
           }
           case 'short': {
-            // Tenues courtes: augmenter légèrement la tenue, réduire un peu le repos, +reps
             const fW = lerp(0.7, 1.5, t);
             const fR = lerp(1.2, 0.8, t);
             const fN = lerp(0.9, 1.25, t);
@@ -466,8 +542,7 @@
             break;
           }
           case 'reverse': {
-            // "Plus difficile" = davantage de temps passé à relâcher / plus de volume
-            const fW = lerp(1.0, 1.6, t); // relâche plus longue
+            const fW = lerp(1.0, 1.6, t); // plus de relâche
             const fN = lerp(0.8, 1.3, t);
             work = roundSec(work * fW);
             rest = roundSec(rest * lerp(1.0, 0.9, t));
@@ -490,14 +565,13 @@
             break;
           }
           case 'elevator': {
-            const dur = roundSec(lerp(2, 4, t)); // secondes par palier
+            const dur = roundSec(lerp(2, 4, t));
             steps = steps.map(s=>({label:s.label, seconds: dur}));
             cycles = Math.round(lerp(3, 5, t));
             restBetweenCycles = 20;
             break;
           }
           case 'breath': {
-            // 4/4 → 8/8 selon difficulté
             const sec = roundSec(lerp(4, 8, t));
             steps = [{label:'Inspire (relâche)',seconds:sec},{label:'Expire (contrac. douce 20–30%)',seconds:sec}];
             cycles = Math.round(lerp(8, 12, t));
@@ -527,10 +601,8 @@
         copy.tuned = { type:'info' };
       }
 
-      // Aide: insérer un conseil d’intensité selon la difficulté
-      const intens = intensityAdvice(d);
       copy.help = copy.help || {};
-      copy.help.intensity = intens;
+      copy.help.intensity = intensityAdvice(d);
       return copy;
     }
 
@@ -559,7 +631,7 @@
       function addSection(title, arr){
         if(!arr || !arr.length) return;
         const sec=document.createElement('div');
-        const h3=document.createElement('div'); h3.style.fontWeight='700'; h3.style.marginTop='6px'; h3.textContent=title; sec.appendChild(h3);
+        const h3=document.createElement('div'); h3.style.fontWeight='800'; h3.style.marginTop='6px'; h3.textContent=title; sec.appendChild(h3);
         const ul=document.createElement('ul'); arr.forEach(x=>{ const li=document.createElement('li'); li.textContent=x; ul.appendChild(li); }); sec.appendChild(ul);
         helpContent.appendChild(sec);
       }
@@ -569,7 +641,6 @@
       addSection('Conseils / Progression', h.progress||h.tips);
       addSection('Intensité & position (auto)', [h.intensity]);
 
-      // Ajuste l’affichage initial du timer
       updateUIForExercise();
     }
 
@@ -664,7 +735,6 @@
     resetBtn.addEventListener('click', reset);
 
     // ====== Init ======
-    // Préférences
     $('soundToggle').checked = !!(LS.k.soundOn);
     $('vibrateToggle').checked = !!(LS.k.vibOn);
     $('wakeToggle').checked = !!(LS.k.wakeOn);
@@ -674,9 +744,41 @@
 
     // Accessibilité: Espace = démarrer/pause, Échap = reset
     document.addEventListener('keydown', (e)=>{
+      // éviter que la barre d'espace scroll la page si bouton visible
       if(e.code==='Space'){ e.preventDefault(); if(state===STATE.RUNNING || state===STATE.PAUSED) pause(); else start(); }
       if(e.code==='Escape'){ reset(); }
     });
+
+    // ====== PWA: bannière d'installation (Android/Chrome) ======
+    let deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      const bn = $('installBanner');
+      if(bn) bn.classList.add('show');
+    });
+    $('installBtn').addEventListener('click', async () => {
+      if(!deferredPrompt) return;
+      try{
+        await deferredPrompt.prompt();
+        await deferredPrompt.userChoice;
+      }catch(_){} finally{
+        deferredPrompt = null;
+        $('installBanner')?.classList.remove('show');
+      }
+    });
+    $('dismissInstall').addEventListener('click', ()=> $('installBanner')?.classList.remove('show'));
+
+    // iOS astuce : afficher la bannière si PWA non installable nativement
+    // (Safari iOS n'émet pas beforeinstallprompt)
+    if (/iphone|ipad|ipod/i.test(navigator.userAgent) && !window.matchMedia('(display-mode: standalone)').matches) {
+      // Affiche juste la bannière avec le bouton "Plus tard" (instruction implicite)
+      $('installBanner')?.classList.add('show');
+      $('installBtn').textContent = 'Comment faire';
+      $('installBtn').onclick = () => {
+        alert('Sur iOS : bouton "Partager" → "Sur l’écran d’accueil".');
+      };
+    }
   </script>
 </body>
 </html>
